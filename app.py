@@ -1,29 +1,13 @@
-"""
-Streamlit RAG Chat UI
-Entry point: run with `streamlit run app.py` from the project root.
-
-Security notes:
-- API keys are never rendered or logged in the UI.
-- All user input is validated server-side in stream_rag_response() before
-  being passed to the LLM chain.
-- TODO(security): Add rate limiting if this app is deployed publicly.
-- TODO(security): Add OAuth/auth layer if this app is deployed publicly.
-"""
-
 import sys
 import os
-
-# Ensure the module directory is on the path so imports resolve correctly.
-MODULE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "module")
-sys.path.insert(0, MODULE_DIR)
-
 from dotenv import load_dotenv
-load_dotenv()
-
 import streamlit as st
 from router import router
 from history_manager import HistoryManager
 
+MODULE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "module")
+sys.path.insert(0, MODULE_DIR)
+load_dotenv()
 # ---------------------------------------------------------------------------
 # Page Config
 # ---------------------------------------------------------------------------
@@ -209,8 +193,9 @@ if "total_questions" not in st.session_state:
 if "history_manager" not in st.session_state:
     st.session_state.history_manager = HistoryManager()
 
-# Build the router fresh on every run so hot-reloading works during development
-router_execute = router(history_manager=st.session_state.history_manager)
+# Build the router fresh on every run so hot-reloading works during development.
+# router() returns a (execute, stream_execute) tuple.
+router_execute, stream_router_execute = router(history_manager=st.session_state.history_manager)
 
 if "session_id" not in st.session_state:
     import uuid
@@ -315,25 +300,21 @@ if prompt := st.chat_input("Ask a question about your documentation…", max_cha
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.session_state.total_questions += 1
 
-    # Router response (non-streaming; router handles history internally)
+    # Stream assistant response with typewriter effect
     with st.chat_message("assistant", avatar="🤖"):
-        response_placeholder = st.empty()
         full_response = ""
 
         try:
-            with st.spinner("Thinking..."):
-                # router execute() handles: cache check, query rewrite, RAG, and
-                # saving both turns to HistoryManager — no extra work needed here.
-                full_response = router_execute(
-                    prompt,
-                    session_id=_session_id,
-                )
-
-            response_placeholder.markdown(full_response)
+            # st.write_stream consumes the generator and renders each chunk
+            # as it arrives, producing the typewriter effect.
+            # stream_router_execute handles: history check, query rewrite,
+            # RAG streaming, and saving turns to HistoryManager internally.
+            full_response = st.write_stream(
+                stream_router_execute(prompt, session_id=_session_id)
+            )
 
         except EnvironmentError as e:
-            # Surface config errors without leaking secrets
-            response_placeholder.error(
+            st.error(
                 "⚠️ Configuration error: API key not found. "
                 "Please check your `.env` file."
             )
@@ -341,14 +322,16 @@ if prompt := st.chat_input("Ask a question about your documentation…", max_cha
             full_response = ""
 
         except Exception:
-            response_placeholder.error(
+            st.error(
                 "⚠️ An unexpected error occurred while generating a response. "
                 "Please try again."
             )
-            print("[RAG UI] Unexpected error during router execute.")
+            print("[RAG UI] Unexpected error during stream_router_execute.")
             full_response = ""
 
+    # st.write_stream already rendered the text; we just store it for history display
     if full_response:
         st.session_state.messages.append(
             {"role": "assistant", "content": full_response}
         )
+

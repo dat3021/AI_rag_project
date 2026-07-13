@@ -21,14 +21,14 @@ def load_markdown_from_github(repo_owner: str, repo_name: str, branch: str = "ma
     docs = []
     
     for element in tree.tree:
-        # Nếu là file (blob) và đuôi .md
+        # if this is with .md in the end 
         if element.type == "blob" and element.path.endswith(".md"):
             try:
-                # Lấy nội dung file thô
+                # take raw content
                 file_content = repo.get_contents(element.path, ref=branch)
                 text_content = file_content.decoded_content.decode("utf-8")
                 
-                # Biến đổi thành chuẩn Document của Langchain để truyền đi bước sau
+                # standardize metadata
                 doc = Document(
                     page_content=text_content,
                     metadata={
@@ -51,6 +51,6 @@ if __name__ == "__main__":
     documents = load_markdown_from_github(repo_owner=OWNER, repo_name=REPO)
     
     if documents:
-        print("\n--- FILE ĐẦU TIÊN TÌM ĐƯỢC ---")
-        print(f"Nguồn: {documents[0].metadata['source']}")
-        print(f"Nội dung (100 ký tự): {documents[0].page_content[:100]}...")
+        print("\n--- first document ---")
+        print(f"source: {documents[0].metadata['source']}")
+        print(f"content (100 chars): {documents[0].page_content[:100]}...")

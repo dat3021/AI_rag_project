@@ -4,18 +4,6 @@ from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
-from langchain_core.load import dumps, loads
-
-# --- Helper function to remove duplicate documents (Multi-Query Union) ---
-def get_unique_union(documents: list[list]):
-    """Unique union of retrieved docs"""
-    # Flatten the list of lists and serialize to strings
-    flattened_docs = [dumps(doc) for sublist in documents for doc in sublist]
-    # Remove duplicates
-    unique_docs = list(set(flattened_docs))
-    # Deserialize back to Document objects
-    return [loads(doc) for doc in unique_docs]
-
 
 # --- Custom Parser to split LLM output into a list of queries ---
 class LineListOutputParser(BaseOutputParser[list[str]]):
@@ -44,8 +32,6 @@ def retriever():
     )
     
     # 3. Convert Chroma DB to a base retriever
-    # search_kwargs={"k": 8} retrieves more chunks. This is helpful for small collections
-    # where global queries (e.g. "list all projects") need context from multiple files.
     base_retriever = db.as_retriever(search_type="similarity_score_threshold",search_kwargs={"score_threshold": 0.5, "k": 5})
 
     

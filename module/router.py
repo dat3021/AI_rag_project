@@ -1,4 +1,5 @@
 import os
+from typing import Generator
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
@@ -10,10 +11,6 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 load_dotenv()
 
-
-# ---------------------------------------------------------------------------
-# RAG answer prompt — rich context + answer format
-# ---------------------------------------------------------------------------
 RAG_PROMPT_TEMPLATE = """You are an expert assistant. Answer the user's question based ONLY on the following retrieved context.
 If you don't know the answer or the context doesn't cover it, say clearly that you don't have that information.
 If the question is about the author or creator, present the information in a positive, professional light.
@@ -29,8 +26,8 @@ Answer:"""
 
 def _build_llm():
     """Return a configured LLM instance."""
-    # api_key = os.environ.get("GROQ_API_KEY")
-    api_key = os.environ.get("GOOGLE_API_KEY")
+    api_key = os.environ.get("GROQ_API_KEY")
+    # api_key = os.environ.get("GOOGLE_API_KEY")
     if not api_key:
         raise EnvironmentError(
             "GOOGLE_API_KEY environment variable is not set. "
@@ -168,30 +165,83 @@ Do not include any other text, markdown, or explanation."""
 
         return answer
 
-    return execute
+    # ------------------------------------------------------------------
+    # Streaming version — gatekeeper stays non-streaming (needs full
+    # decision string), only the final RAG generation step streams.
+    # ------------------------------------------------------------------
+    def stream_execute(
+        user_question: str, session_id: str = "default"
+    ) -> Generator[str, None, None]:
+        """
+        Streaming variant of execute(). Yields text chunks as they arrive
+        from the LLM so the UI can display a typewriter effect.
+
+        On a cache hit (EXISTS), the cached string is yielded in one shot
+        (instant — no LLM call needed).
+
+        Args:
+            user_question: The raw question from the user.
+            session_id:    Identifies the conversation.
+
+        Yields:
+            Text chunks from the LLM stream (or the full cached string).
+        """
+        # Input validation
+        user_question = user_question.strip()
+        if not user_question:
+            yield "Please enter a valid question."
+            return
+        if len(user_question) > 2000:
+            yield "Question is too long. Please keep it under 2000 characters."
+            return
+
+        print(f"\n👉 [stream] User [{session_id}]: {user_question}")
+
+        history = history_manager.get_recent_messages(session_id, limit=4)
+        full_answer = ""
+
+        if not history:
+            # No history → stream RAG directly
+            print("🔍 No history. Streaming RAG directly...")
+            for chunk in rag_chain.stream(user_question):
+                full_answer += chunk
+                yield chunk
+        else:
+            # Gatekeeper: one non-streaming LLM call to classify the question
+            print("🧠 Gatekeeper analysing history...")
+            decision = gatekeeper_chain.invoke({
+                "question": user_question,
+                "chat_history": history,
+            }).strip()
+
+            if decision.startswith("EXISTS:"):
+                full_answer = decision.replace("EXISTS:", "").strip()
+                print("⚡ [CACHE HIT] Streaming cached answer instantly.")
+                yield full_answer  # instant — already computed
+
+            elif decision.startswith("NEW_QUERY:"):
+                standalone_q = decision.replace("NEW_QUERY:", "").strip()
+                print(f"🔍 [CACHE MISS] Streaming for: '{standalone_q}'")
+                for chunk in rag_chain.stream(standalone_q):
+                    full_answer += chunk
+                    yield chunk
+
+            else:
+                # Fallback: unexpected gatekeeper format → stream original
+                print("⚠️  Unexpected gatekeeper format. Streaming original.")
+                for chunk in rag_chain.stream(user_question):
+                    full_answer += chunk
+                    yield chunk
+
+        # Persist both turns after the full stream is consumed
+        if full_answer:
+            history_manager.add_user_message(session_id, user_question)
+            history_manager.add_ai_message(session_id, full_answer)
+
+    return execute, stream_execute
 
 
 # ---------------------------------------------------------------------------
 # CLI entry point — interactive REPL for quick testing
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    SESSION = "cli_test"
-    hm = HistoryManager()
-    run = router(history_manager=hm)
-
-    print("🤖 RAG Router REPL  |  type 'quit' or 'exit' to stop\n")
-    while True:
-        try:
-            q = input("You: ").strip()
-        except (KeyboardInterrupt, EOFError):
-            print("\nBye!")
-            break
-
-        if q.lower() in {"quit", "exit", "q"}:
-            print("Bye!")
-            break
-        if not q:
-            continue
-
-        answer = run(q, session_id=SESSION)
-        print(f"\n🤖 AI: {answer}\n")

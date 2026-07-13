@@ -2,11 +2,10 @@ import sys
 import os
 from dotenv import load_dotenv
 import streamlit as st
-from router import router
-from history_manager import HistoryManager
+from module.router import router
+from module.history_manager import HistoryManager
 
-MODULE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "module")
-sys.path.insert(0, MODULE_DIR)
+
 load_dotenv()
 # ---------------------------------------------------------------------------
 # Page Config

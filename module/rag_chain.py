@@ -29,15 +29,11 @@ def format_docs(docs):
 
 
 def build_rag_chain():
-    """
-    Build and return a LangChain LCEL RAG chain.
-    API key is loaded exclusively from the environment variable GOOGLE_API_KEY.
-    No hardcoded secrets or fallback values are used.
-    """
+    """ Build and return a LangChain LCEL RAG chain."""
     api_key = os.environ.get("GOOGLE_API_KEY")
     if not api_key:
         raise EnvironmentError(
-            "GOOGLE_API_KEY environment variable is not set. "
+            "API_KEY environment variable is not set. "
             "Please add it to your .env file."
         )
 

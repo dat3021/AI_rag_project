@@ -5,8 +5,8 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
 from langchain_groq import ChatGroq
-from retriever import retriever
-from history_manager import HistoryManager
+from module.retriever import retriever
+from module.history_manager import HistoryManager
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 load_dotenv()
@@ -241,7 +241,5 @@ Do not include any other text, markdown, or explanation."""
     return execute, stream_execute
 
 
-# ---------------------------------------------------------------------------
-# CLI entry point — interactive REPL for quick testing
-# ---------------------------------------------------------------------------
 if __name__ == "__main__":
+    pass

@@ -225,7 +225,7 @@ with st.sidebar:
     st.markdown(
         """
         <p style='color:#94a3b8; font-size:0.85rem;'>
-        🧠 <b style='color:#e2e8f0'>LLM:</b> Gemini 2.5 Flash Lite<br>
+        🧠 <b style='color:#e2e8f0'>LLM:</b> llama-3.1-8b-instant<br>
         🔀 <b style='color:#e2e8f0'>Router:</b> History-Aware Gatekeeper<br>
         🗄️ <b style='color:#e2e8f0'>Vector DB:</b> ChromaDB<br>
         🔗 <b style='color:#e2e8f0'>Embeddings:</b> gemini-embedding-001<br>

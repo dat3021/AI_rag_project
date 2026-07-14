@@ -25,16 +25,33 @@ def retriever():
         model="gemini-embedding-001",
     )
     
-    # 2. Load the existing Vector DB from your directory
+    # # 2. Load the existing Vector DB from your directory
+    # db = Chroma(
+    #     persist_directory="./vector_db",
+    #     embedding_function=gemini_embedding
+    # )
+    
+    # # 3. Convert Chroma DB to a base retriever
+    # base_retriever = db.as_retriever(search_type="similarity_score_threshold",search_kwargs={"score_threshold": 0.5, "k": 5})
+
+    
+    # return base_retriever
+
+    
+    # 2. Dynamically get the absolute path to the project root
+    # Since retriever.py is inside /module, we go up one directory to reach the root
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    db_path = os.path.join(project_root, "vector_db")
+    
+    # 3. Load the existing Vector DB using the bulletproof path
     db = Chroma(
-        persist_directory="./vector_db",
+        persist_directory=db_path,
         embedding_function=gemini_embedding
     )
     
-    # 3. Convert Chroma DB to a base retriever
-    base_retriever = db.as_retriever(search_type="similarity_score_threshold",search_kwargs={"score_threshold": 0.5, "k": 5})
+    # 4. Convert Chroma DB to a base retriever
+    base_retriever = db.as_retriever(search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.5, "k": 3})
 
-    
     return base_retriever
 
 

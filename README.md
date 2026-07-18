@@ -9,11 +9,13 @@ Built as a portfolio project to demonstrate modern RAG engineering, this system 
 
 ## Architecture
 
-*(Insert architecture diagram here)*
-
 The project is split into two distinct pipelines:
 1. **Indexing Pipeline (Offline):** Extracts markdown files directly from a target GitHub repository, processes them using a hierarchical two-stage semantic chunking strategy, generates embeddings, and persists them into a local vector database.
-2. **Query Pipeline (Online):** A user interacts with a Streamlit chat interface. The system uses a **History-Aware Gatekeeper LLM** to analyze the user's question against chat history. It either serves a cached answer (if the question is a duplicate), rewrites the question into a standalone query (if it contains abstract pronouns like "it"), or passes it directly to the Vector DB for context retrieval and final answer generation.
+<img width="902" height="122" alt="image" src="https://github.com/user-attachments/assets/0453441e-3bef-40a9-8bbb-fa4a90092329" />
+
+
+3. **Query Pipeline (Online):** A user interacts with a Streamlit chat interface. The system uses a **History-Aware Gatekeeper LLM** to analyze the user's question against chat history. It either serves a cached answer (if the question is a duplicate), rewrites the question into a standalone query (if it contains abstract pronouns like "it"), or passes it directly to the Vector DB for context retrieval and final answer generation.
+<img width="800" height="450" alt="image" src="https://github.com/user-attachments/assets/d4d54b62-b0bd-4883-8531-6054bbd760d9" />
 
 ---
 

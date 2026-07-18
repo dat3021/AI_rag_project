@@ -1,68 +1,80 @@
-# 🤖 Multi-Query AI RAG Knowledge Assistant
+# 🤖 AI RAG Knowledge Assistant
 
-An advanced **Retrieval-Augmented Generation (RAG)** pipeline designed to index, query, and chat with technical markdown documentation from GitHub repositories. This system leverages Google's Gemini models for embeddings and generative QA, stores vectorized chunks in ChromaDB, and features a responsive, streaming chat UI built with Streamlit.
+## Project Overview
+The AI RAG Project is an advanced **Retrieval-Augmented Generation (RAG)** conversational assistant designed to index, query, and chat with technical markdown documentation from GitHub repositories. 
 
-This project was built to demonstrate modern RAG architecture practices, including semantic chunking, custom document loaders, vector store persistence, and streaming token delivery.
+Built as a portfolio project to demonstrate modern RAG engineering, this system allows users to ask complex questions about technical documentation. It goes beyond a simple "Naive RAG" by implementing conversational memory, intelligent query routing, response caching, and a responsive streaming chat interface.
 
 ---
 
-## 🛠️ Tech Stack & Architecture
+## Architecture
 
+*(Insert architecture diagram here)*
+
+The project is split into two distinct pipelines:
+1. **Indexing Pipeline (Offline):** Extracts markdown files directly from a target GitHub repository, processes them using a hierarchical two-stage semantic chunking strategy, generates embeddings, and persists them into a local vector database.
+2. **Query Pipeline (Online):** A user interacts with a Streamlit chat interface. The system uses a **History-Aware Gatekeeper LLM** to analyze the user's question against chat history. It either serves a cached answer (if the question is a duplicate), rewrites the question into a standalone query (if it contains abstract pronouns like "it"), or passes it directly to the Vector DB for context retrieval and final answer generation.
+
+---
+
+## Tech Stack
 *   **Orchestration:** LangChain (LCEL)
-*   **LLM API:** Google Gemini (`gemini-2.5-flash-lite`)
+*   **LLM API:** Google Gemini (`gemini-2.5-flash-lite`) & Groq (`llama-3.1-8b-instant`)
 *   **Embeddings:** Google AI Embeddings (`gemini-embedding-001`)
 *   **Vector Database:** ChromaDB (Local Persisted Store)
 *   **Frontend UI:** Streamlit (Custom Dark/Glassmorphism theme)
 *   **Ingestion:** PyGithub (GitHub API wrapper)
-*   **Package Manager:** uv (Modern, fast Python package installer)
+*   **Evaluation:** Ragas (Context Precision, Faithfulness, Answer Relevancy)
+*   **Package Manager:** uv
 
-```mermaid
-graph TD
-    A[GitHub Repo / Local Docs] -->|loader.py| B[Raw Markdown Documents]
-    B -->|splitter.py| C[Semantic Header Splits]
-    C -->|splitter.py| D[Character Chunks]
-    D -->|embedding.py| E[Google Generative AI Embeddings]
-    E -->|embedding.py| F[(Local Chroma DB)]
-    
-    G[Streamlit Chat UI] -->|User Question| H[RAG Chain]
-    F -->|Retrieval k=3| H
-    H -->|gemini-2.5-flash-lite| I[Streaming LLM Response]
-    I -->|Token Stream| G
+---
+
+## Key Features
+*   **History-Aware Gatekeeper LLM:** Acts as a smart router before the RAG chain. It resolves conversational context (e.g., translating *"who built it?"* to *"who built the ELT pipeline?"*) so the vector database can perform accurate similarity searches.
+*   **Semantic Caching:** The Gatekeeper detects if a user asks a question that was already answered in the session and instantly returns the cached answer, saving tokens and database latency.
+*   **Two-Pass Semantic Chunking:** Uses LangChain's `MarkdownHeaderTextSplitter` to split files by structural headers, followed by `RecursiveCharacterTextSplitter` to ensure safe overlap and chunk sizing.
+*   **Real-time Streaming Responses:** The UI features a typewriter streaming effect, yielding tokens from the RAG generation step in real-time for a premium user experience.
+*   **Automated RAG Evaluation:** Includes a standalone `evaluate.py` script that uses the **Ragas** framework to mathematically score the system against curated ground-truth questions.
+
+---
+
+## Quick Start
+
+### 1. Setup Environment
+Clone the repository and install dependencies using `uv`:
+```bash
+uv sync
+```
+
+### 2. Configure Secrets
+Create a `.env` file in the root directory and add your API keys:
+```env
+GOOGLE_API_KEY="your_google_api_key_here"
+# Optional: GROQ_API_KEY="your_groq_api_key_here"
+# Optional: GITHUB_TOKEN="your_github_token_here"
+```
+
+### 3. Build the Vector Database
+Fetch the documents from GitHub and generate the ChromaDB index:
+```bash
+python module/embedding.py
+```
+
+### 4. Run the Application
+Launch the Streamlit chat interface:
+```bash
+streamlit run app.py
+```
+
+*(Optional) Run the Ragas Evaluation:*
+```bash
+python evaluate.py
 ```
 
 ---
 
-## 💡 Key Architectural Details
-
-### 1. Two-Pass Semantic Chunking (`module/splitter.py`)
-To prevent information loss or paragraph truncation, this project uses a hierarchical two-stage chunking strategy:
-*   **First Pass:** The `MarkdownHeaderTextSplitter` splits files along header boundaries (`#`, `##`, `###`). This preserves the structural context of the documentation.
-*   **Second Pass:** A `RecursiveCharacterTextSplitter` runs on the header-split sections to ensure any chunk exceeding `1000` characters is broken down safely with overlap (`100` characters), optimizing retrieval quality.
-
-### 2. Document Loader (`module/loader.py`)
-Downloads `.md` files dynamically from target GitHub repositories using personal access tokens, converting them into standardized LangChain `Document` objects with rich metadata (file path, repo name, branch).
-
-### 3. Vector Database Management (`module/embedding.py` & `module/check.py`)
-Extracts and converts documents into embeddings, saving them to a local directory `./vector_db` with unique UUID-based identifiers to prevent overlapping namespace collisions.
-
-### 4. LCEL Stream RAG Chain (`module/rag_chain.py`)
-Built using **LangChain Expression Language (LCEL)**, composing the retriever, context formatter, prompt templates, and streaming-compatible LLMs into a unified pipeline.
-
----
-
-
-## 🔍 Deep-Dive: Limitations of Naive RAG & Future Improvements
-
-When building this project, a few key RAG limitations were analyzed:
-
-### Why Global Questions (like "List all projects?") Fail
-In Naive RAG, vector search relies on **semantic similarity** (finding chunks closest in meaning to the user query). 
-1.  **Limited Window ($K$):** The system retrieved the top $K$ (e.g. 3) most relevant chunks. If you have 5 projects spread across 5 separate documents, a retriever fetching $3$ chunks cannot supply details for all 5.
-2.  **No Global Intent Match:** A query like "list all projects" is mathematically dissimilar to the technical details inside each individual project file. It will fail to retrieve a uniform representation of all files.
-
-### Solutions (Roadmap)
-To transition this from a Naive RAG to an Advanced RAG system, the following features are planned:
-*   [ ] **Parent-Document Retrieval:** Retrieve full documents when small chunks are matched, giving the LLM broader context.
-*   [ ] **Reranking (Cohere/Cross-Encoder):** Fetch a larger list of chunks (e.g., $K=20$), then rank them with a cross-encoder model to supply the most relevant $3$ to the LLM.
-*   [ ] **Multi-Query Expansion:** Feed the user query to a generator that translates it into multiple search prompts to maximize chunk retrieval recall.
-*   [ ] **Agentic Routing:** For global summarization queries (e.g. "what is this repo?"), route to a map-reduce summarizer instead of standard vector similarity search.
+## Improvement Suggestions
+To transition this from an Advanced RAG to an Enterprise-grade system, the following features could be implemented:
+*   **Document Citations:** Update the RAG chain to return `metadata` alongside the answer, displaying citation badges (e.g., `[Source: readme.md]`) in the UI so users can verify information.
+*   **Cross-Encoder Re-ranking:** Fetch a larger list of chunks from ChromaDB (e.g., $K=15$), then rank them with a cross-encoder model (like Cohere) to supply only the absolute best $3$ to the LLM, reducing context confusion/bleeding between different projects.
+*   **Parent-Document Retrieval:** Retrieve the full parent document context when a small, highly-specific child chunk is matched.

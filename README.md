@@ -15,7 +15,7 @@ The project is split into two distinct pipelines:
 
 
 3. **Query Pipeline (Online):** A user interacts with a Streamlit chat interface. The system uses a **History-Aware Gatekeeper LLM** to analyze the user's question against chat history. It either serves a cached answer (if the question is a duplicate), rewrites the question into a standalone query (if it contains abstract pronouns like "it"), or passes it directly to the Vector DB for context retrieval and final answer generation.
-<img width="800" height="450" alt="image" src="https://github.com/user-attachments/assets/d4d54b62-b0bd-4883-8531-6054bbd760d9" />
+<img width="798" height="452" alt="image" src="https://github.com/user-attachments/assets/aa29cf2b-3188-4903-a289-f183b1225110" />
 
 ---
 

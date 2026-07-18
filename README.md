@@ -1,5 +1,8 @@
 # 🤖 AI RAG Knowledge Assistant
 
+## Live Demo
+- **Live Application:**: https://dat3021-ai-rag-project.streamlit.app/
+  
 ## Project Overview
 The AI RAG Project is an advanced **Retrieval-Augmented Generation (RAG)** conversational assistant designed to index, query, and chat with technical markdown documentation from GitHub repositories. 
 

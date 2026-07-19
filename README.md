@@ -1,4 +1,4 @@
-# 🤖 AI RAG Knowledge Assistant
+# AI RAG Knowledge Assistant
 
 ## Live Demo
 - **Live Application:**: https://dat3021-ai-rag-project.streamlit.app/

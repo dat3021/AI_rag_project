@@ -45,10 +45,7 @@ def load_markdown_from_github(repo_owner: str, repo_name: str, branch: str = "ma
     return docs
 
 if __name__ == "__main__":
-    OWNER = "dat3021" 
-    REPO = "RAG_document"
-    
-    documents = load_markdown_from_github(repo_owner=OWNER, repo_name=REPO)
+    pass
     
     if documents:
         print("\n--- first document ---")
